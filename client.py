@@ -50,7 +50,7 @@ elif args.download is not None:
 
     password = args.password
     if password is None:
-        print("password: ", end='')
+        print("password: ")
         password = stdin.readline().strip()
 
     # decrypt
