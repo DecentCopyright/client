@@ -1,10 +1,11 @@
 import argparse
 import os
 import tarfile
-from sys import stdin
-
+import random
+import string
 import ipfsapi
 from simplecrypt import encrypt, decrypt
+from sys import stdin
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--upload", type=str, default=None, help="file path to upload")
@@ -15,12 +16,10 @@ args = parser.parse_args()
 ipfs = ipfsapi.connect('127.0.0.1', 5001)
 tar_path = "__temp.tar"
 
-password = args.password
-if password is None:
-    print("password: ")
-    password = stdin.readline()
-
 if args.upload is not None:
+    # generate password
+    password = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(16)])
+
     # get file path
     path = args.upload
     if not path.startswith('/'):
@@ -34,18 +33,28 @@ if args.upload is not None:
     tar.close()
 
     # encrypt
+    print("encrypting......")
     file = open(tar_path, mode='rb')
     encrypted_data = encrypt(password, file.read())
 
     # upload to ipfs
+    print("uploading to IPFS......")
     ipfs_hash = ipfs.add_bytes(encrypted_data)
     print("Hash: " + ipfs_hash)
+    print("Password: " + password)
 elif args.download is not None:
     # download from ipfs
+    print("downloading from IPFS......")
     ipfs_hash = args.download
     ipfs.get(ipfs_hash)
 
+    password = args.password
+    if password is None:
+        print("password: ", end='')
+        password = stdin.readline().strip()
+
     # decrypt
+    print("decrypting......")
     downloaded_file = open(ipfs_hash, mode='rb')
     decrypted_data = decrypt(password, downloaded_file.read())
 
@@ -58,6 +67,7 @@ elif args.download is not None:
     tar_output.close()
 
     # extract data from tar
+    print("extracting......")
     tar = tarfile.open(tar_path)
     tar.extractall()
     tar.close()
