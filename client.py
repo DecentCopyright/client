@@ -12,12 +12,6 @@ def chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
-def encrypt(key, data):
-	return data
-
-def decrypt(key, data):
-	return data
-
 
 class Song:
 	def __init__(self, array):
@@ -50,7 +44,11 @@ class Client:
 		# connect to ipfs
 		self.ipfs = ipfsapi.connect('127.0.0.1', 5001)
 
-	def uploadSong(self, songName, price, holders, shares, path):
+	def uploadSong(self, songName, price, path='to_upload/DemoZero.mp3', holders=[], shares=[]):
+		if len(holders) == 0: 
+			holders = [self.account_address]
+			shares = [100]
+
 		tar_path = "__temp.tar"
 		# generate random password key
 		password = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(16)])
@@ -144,3 +142,10 @@ class Client:
 		# ----------------------
 		os.remove(tar_path)
 		return files
+
+
+def encrypt(key, data):
+	return data
+
+def decrypt(key, data):
+	return data
