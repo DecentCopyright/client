@@ -12,6 +12,13 @@ def chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
+def encrypt(key, data):
+	return data
+
+def decrypt(key, data):
+	return data
+
+
 class Song:
 	def __init__(self, array):
 		self.ID = Web3.toHex(array[0])
@@ -23,24 +30,25 @@ class Song:
 		return "ID:{} name:{}".format(self.ID, self.name)
 
 
-class Transaction:
-	def encrypt(self, key, data):
-		return data
+class Client:
+	w3 = None
+	@classmethod
+	def setW3(cls, w3):
+		cls.w3 = w3
 
-	def decrypt(self, key, data):
-		return data
-
-	def __init__(self, w3, abi_path, contract_address, account_address):
-		abifile = open(abi_path, 'r')
-		abi = json.load(abifile)
-		abifile.close()
-		self.contract = w3.eth.contract(abi=abi, address=contract_address)
+	def __init__(self, account_address):
+		interface_file = open('smart-copyright.info', 'r')
+		interface = json.load(interface_file)
+		abi = interface['abi']
+		contract_address = interface['contract_address']
+		interface_file.close()
+		
+		self.contract = Client.w3.eth.contract(abi=abi, address=contract_address)
 		# register this guy...
 		self.account_address = account_address
 		self.contract.functions.userRegister().transact({'from': self.account_address})
 		# connect to ipfs
 		self.ipfs = ipfsapi.connect('127.0.0.1', 5001)
-		self.w3 = w3
 
 	def uploadSong(self, songName, price, holders, shares, path):
 		tar_path = "__temp.tar"
@@ -55,7 +63,7 @@ class Transaction:
 		# encrypt
 		print("encrypting......")
 		file = open(tar_path, mode='rb')
-		encrypted_data = self.encrypt(password, file.read())
+		encrypted_data = encrypt(password, file.read())
 		file.close()
 		# upload to ipfs
 		print("uploading to IPFS......")
@@ -70,7 +78,7 @@ class Transaction:
 		key = Web3.toBytes(text=password)
 
 		tx_hash = self.contract.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': self.account_address})
-		tx_receipt = self.w3.eth.getTransactionReceipt(tx_hash)
+		tx_receipt = Client.w3.eth.getTransactionReceipt(tx_hash)
 		logs = self.contract.events.registerEvent().processReceipt(tx_receipt)
 		songID = Web3.toHex(logs[0]['args']['songID'])
 		return songID
@@ -98,7 +106,7 @@ class Transaction:
 
 	def buyLicense(self, song):
 		tx_hash = self.contract.functions.buyLicense(song.ID).transact({'from': self.account_address, 'value': song.price})
-		tx_receipt = self.w3.eth.getTransactionReceipt(tx_hash)
+		tx_receipt = Client.w3.eth.getTransactionReceipt(tx_hash)
 		logs = self.contract.events.licenseEvent().processReceipt(tx_receipt)
 		purchased_songID = Web3.toHex(logs[0]['args']['songID'])
 		return purchased_songID
@@ -118,7 +126,7 @@ class Transaction:
 		# decrypt
 		print("decrypting......")
 		downloaded_file = open(purchased_url, mode='rb')
-		decrypted_data = self.decrypt(purchased_key, downloaded_file.read())
+		decrypted_data = decrypt(purchased_key, downloaded_file.read())
 		downloaded_file.close()
 		# remove raw ipfs data
 		os.remove(purchased_url)
