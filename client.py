@@ -13,13 +13,6 @@ def chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
-def getTXReceipt(tx_hash):
-	tx_receipt = None
-	while tx_receipt is None:
-		tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
-		time.sleep(1)
-	return tx_receipt
-
 class Song:
 	def __init__(self, array):
 		self.ID = Web3.toHex(array[0])
@@ -36,6 +29,13 @@ class Client:
 	@classmethod
 	def setW3(cls, w3):
 		cls.w3 = w3
+
+	def getTXReceipt(self, tx_hash):
+		tx_receipt = None
+		while tx_receipt is None:
+			tx_receipt = Client.w3.eth.getTransactionReceipt(tx_hash)
+			time.sleep(1)
+		return tx_receipt
 
 	def __init__(self, account_address):
 		interface_file = open('smart-copyright.info', 'r')
@@ -83,7 +83,7 @@ class Client:
 		key = Web3.toBytes(text=password)
 
 		tx_hash = self.contract.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': self.account_address})
-		tx_receipt = getTXReceipt(tx_hash)
+		tx_receipt = self.getTXReceipt(tx_hash)
 		logs = self.contract.events.registerEvent().processReceipt(tx_receipt)
 		songID = Web3.toHex(logs[0]['args']['songID'])
 		return songID
@@ -111,7 +111,7 @@ class Client:
 
 	def buyLicense(self, song):
 		tx_hash = self.contract.functions.buyLicense(song.ID).transact({'from': self.account_address, 'value': song.price})
-		tx_receipt = getTXReceipt(tx_hash)
+		tx_receipt = self.getTXReceipt(tx_hash)
 		logs = self.contract.events.licenseEvent().processReceipt(tx_receipt)
 		purchased_songID = Web3.toHex(logs[0]['args']['songID'])
 		return purchased_songID
