@@ -6,12 +6,19 @@ import os
 import tarfile
 import random
 import string
+import time
 
 
 def chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
+def getTXReceipt(tx_hash):
+	tx_receipt = None
+	while tx_receipt is None:
+		tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
+		time.sleep(1)
+	return tx_receipt
 
 class Song:
 	def __init__(self, array):
@@ -36,7 +43,7 @@ class Client:
 		abi = interface['abi']
 		contract_address = interface['contract_address']
 		interface_file.close()
-		
+
 		self.contract = Client.w3.eth.contract(abi=abi, address=contract_address)
 		# register this guy...
 		self.account_address = account_address
@@ -45,7 +52,7 @@ class Client:
 		self.ipfs = ipfsapi.connect('127.0.0.1', 5001)
 
 	def uploadSong(self, songName, price, path='to_upload/DemoZero.mp3', holders=[], shares=[]):
-		if len(holders) == 0: 
+		if len(holders) == 0:
 			holders = [self.account_address]
 			shares = [100]
 
@@ -76,7 +83,7 @@ class Client:
 		key = Web3.toBytes(text=password)
 
 		tx_hash = self.contract.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': self.account_address})
-		tx_receipt = Client.w3.eth.getTransactionReceipt(tx_hash)
+		tx_receipt = getTXReceipt(tx_hash)
 		logs = self.contract.events.registerEvent().processReceipt(tx_receipt)
 		songID = Web3.toHex(logs[0]['args']['songID'])
 		return songID
@@ -104,7 +111,7 @@ class Client:
 
 	def buyLicense(self, song):
 		tx_hash = self.contract.functions.buyLicense(song.ID).transact({'from': self.account_address, 'value': song.price})
-		tx_receipt = Client.w3.eth.getTransactionReceipt(tx_hash)
+		tx_receipt = getTXReceipt(tx_hash)
 		logs = self.contract.events.licenseEvent().processReceipt(tx_receipt)
 		purchased_songID = Web3.toHex(logs[0]['args']['songID'])
 		return purchased_songID
